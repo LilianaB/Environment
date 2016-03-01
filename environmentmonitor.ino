@@ -19,6 +19,7 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include <DHT.h>
 #if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined (_VARIANT_ARDUINO_ZERO_)
   #include <SoftwareSerial.h>
 #endif
@@ -28,6 +29,15 @@
 #include "Adafruit_BluefruitLE_UART.h"
 
 #include "BluefruitConfig.h"
+
+#include "DHT.h"          // DHT & AM2302 library
+// Version number
+const float fVerNum = 0.03;
+
+// Data pin connected to AM2302
+#define DHTPIN 2
+#define DHTTYPE DHT22       // DHT 22  (AM2302)
+DHT dht(DHTPIN, DHTTYPE);   // LED pins
 
 // Create the bluefruit object, either software serial...uncomment these lines
 /*
@@ -74,6 +84,20 @@ void setup(void)
   boolean success;
 
   Serial.begin(115200);
+
+  // Wait 3 seconds
+  delay(3000);
+
+  Serial.println(F("Start temperature sensor"));
+  Serial.println(F("---------------------------------------------------"));
+  Serial.println(F("\nAM2302 Sensor"));
+  Serial.print(F("Version : "));
+  Serial.println(fVerNum);
+  Serial.println(F("Arduino - Derek Erb\n"));
+  delay(5000);
+  
+  dht.begin();
+  
   Serial.println(F("Adafruit Bluefruit Heart Rate Monitor (HRM) Example"));
   Serial.println(F("---------------------------------------------------"));
 
@@ -150,28 +174,48 @@ void setup(void)
 /** Send randomized heart rate data continuously **/
 void loop(void)
 {
-  double myFloat = random(1, 500) / 100.0;
-  char myBuffer[16];
-  dtostrf(myFloat, 5, 2, myBuffer);
 
-  Serial.print(F("Updating HRM value to "));
-  Serial.print(myBuffer);
-  Serial.println(F(" BPM"));
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
 
-  /* Command is sent when \n (\r) or println is called */
-  /* AT+GATTCHAR=CharacteristicID,value */
-  ble.print( F("AT+GATTCHAR=") );
-  ble.print( hrmMeasureCharId );
-  ble.print( F(",00-") );
-  ble.println(myFloat, HEX);
-  //ble.println(myBuffer);
-
-  /* Check if command executed OK */
-  if ( !ble.waitForOK() )
-  {
-    Serial.println(F("Failed to get response!"));
+  // check if returns are valid, if they are NaN (not a number) then something went wrong!
+  if (isnan(t) || isnan(h)) {
+    Serial.println(F("Failed to read from DHT"));
   }
+  else {
+    Serial.print(F("Humidity: ")); 
+    Serial.print(h);
+    Serial.print(F(" %\t"));
+    Serial.print(F("Temperature: ")); 
+    Serial.print(t);
+    Serial.println(F(" C"));
 
-  /* Delay before next measurement update */
-  delay(1000);
+    /*double myFloat = random(1, 500) / 100.0;
+    char myBuffer[16];
+    dtostrf(myFloat, 5, 2, myBuffer);*/
+  
+    Serial.print(F("Updating temperature value to "));
+    Serial.print(t);
+    Serial.println(F(" Temperature"));
+  
+    /* Command is sent when \n (\r) or println is called */
+    /* AT+GATTCHAR=CharacteristicID,value */
+    ble.print( F("AT+GATTCHAR=") );
+    ble.print( hrmMeasureCharId );
+    ble.print( F(",00-") );
+    ble.println(t, HEX);
+    //ble.println(myBuffer);
+  
+    /* Check if command executed OK */
+    if ( !ble.waitForOK() )
+    {
+      Serial.println(F("Failed to get response!"));
+    }
+  
+  }
+  
+   /* Delay before next measurement update */
+  delay(3000);
 }
