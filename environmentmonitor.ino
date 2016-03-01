@@ -136,7 +136,7 @@ void setup(void)
     error(F("Could not set device name?"));
   }
 
-  /* Add the Heart Rate Service definition */
+  /* Add the Environment Sensing Service definition */
   /* Service ID should be 1 */
   Serial.println(F("Adding the Environment Service definition (UUID = 0x181A): "));
   success = ble.sendCommandWithIntReply( F("AT+GATTADDSERVICE=UUID=0x181A"), &hrmServiceId);
@@ -144,7 +144,7 @@ void setup(void)
     error(F("Could not add Environment Sensing service"));
   }
 
-  /* Add the Heart Rate Measurement characteristic */
+  /* Add the Temperature characteristic */
   /* Chars ID for Measurement should be 1 */
   Serial.println(F("Adding the Temperature characteristic (UUID = 0x2A6E): "));
   success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A6E, PROPERTIES=0x10, MIN_LEN=3, MAX_LEN=8"), &hrmMeasureCharId);
@@ -152,10 +152,10 @@ void setup(void)
     error(F("Could not add Temperature characteristic"));
   }
 
-  /* Add the Body Sensor Location characteristic */
+  /* Add the Humidity characteristic */
   /* Chars ID for Body should be 2 */
- /* Serial.println(F("Adding the Body Sensor Location characteristic (UUID = 0x2A38): "));
-  success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A38, PROPERTIES=0x02, MIN_LEN=1, VALUE=3"), &hrmLocationCharId);
+  Serial.println(F("Adding the Humidity characteristic (UUID = 0x2A6F): "));
+  success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A6F, PROPERTIES=0x10, MIN_LEN=3, MAX_LEN=8"), &hrmLocationCharId);
     if (! success) {
     error(F("Could not add BSL characteristic"));
   }
@@ -207,6 +207,11 @@ void loop(void)
     ble.print( F(",00-") );
     ble.println(t, HEX);
     //ble.println(myBuffer);
+
+    ble.print( F("AT+GATTCHAR=") );
+    ble.print( hrmLocationCharId );
+    ble.print( F(",00-") );
+    ble.println(h, HEX);
   
     /* Check if command executed OK */
     if ( !ble.waitForOK() )
