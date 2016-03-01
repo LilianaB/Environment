@@ -93,7 +93,7 @@ void setup(void)
   Serial.println(F("\nAM2302 Sensor"));
   Serial.print(F("Version : "));
   Serial.println(fVerNum);
-  Serial.println(F("Arduino - Derek Erb\n"));
+  Serial.println(F("Arduino\n"));
   delay(5000);
   
   dht.begin();
@@ -153,7 +153,7 @@ void setup(void)
   }
 
   /* Add the Humidity characteristic */
-  /* Chars ID for Body should be 2 */
+  /* Chars ID for Humidity should be 2 */
   Serial.println(F("Adding the Humidity characteristic (UUID = 0x2A6F): "));
   success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A6F, PROPERTIES=0x10, MIN_LEN=3, MAX_LEN=8"), &hrmLocationCharId);
     if (! success) {
