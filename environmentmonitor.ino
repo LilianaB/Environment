@@ -67,8 +67,10 @@ void error(const __FlashStringHelper*err) {
 /* The service information */
 
 int32_t hrmServiceId;
+int32_t batServiceId;
 int32_t hrmMeasureCharId;
 int32_t hrmLocationCharId;
+int32_t batMeasureCharId;
 /**************************************************************************/
 /*!
     @brief  Sets up the HW an the BLE module (this function is called
@@ -148,9 +150,30 @@ void setup(void)
     error(F("Could not add BSL characteristic"));
   }
 
+  /* Add the Battery Service definition */
+  /* Service ID should be 1 */
+  Serial.println(F("Adding the Battery Service definition (UUID = 0x180F): "));
+  success = ble.sendCommandWithIntReply( F("AT+GATTADDSERVICE=UUID=0x180F"), &batServiceId);
+  if (! success) {
+    error(F("Could not add Battery service"));
+  }
+
+  /* Add the Battery Level characteristic */
+  /* Chars ID for Measurement should be 1 */
+  Serial.println(F("Adding Battery Level characteristic (UUID = 0x2A19): "));
+  success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A19, PROPERTIES=0x10, MIN_LEN=1,VALUE=100"), &batMeasureCharId);
+    if (! success) {
+    error(F("Could not add HRM characteristic"));
+  }
+  
   /* Add Environmental Sensing Service to the advertising data (needed for Nordic apps to detect the service) */
   Serial.print(F("Adding Environmental Sensing Service to the advertising payload: "));
-  ble.sendCommandCheckOK( F("AT+GAPSETADVDATA=03-16-01-06") );
+  ble.sendCommandCheckOK( F("AT+GAPSETADVDATA=03-02-1A-18") );
+  //ble.sendCommandCheckOK( F("AT+GAPSETADVDATA=03-02-1A-18") );
+
+    /* Add the Battery Service to the advertising data (needed for Nordic apps to detect the service) */
+  Serial.print(F("Adding Heart Rate Service UUID to the advertising payload: "));
+  ble.sendCommandCheckOK( F("AT+GAPSETADVDATA=03-02-0F-18") );
 
   /* Reset the device for the new service setting changes to take effect */
   Serial.print(F("Performing a SW reset (service changes require a reset): "));
@@ -210,5 +233,25 @@ void loop(void)
     }
   
   }
+
+  #define VBATPIN A9
+   
+  float measuredvbat = analogRead(VBATPIN);
+  measuredvbat *= 2;    // we divided by 2, so multiply back
+  measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+  measuredvbat /= 1024; // convert to voltage
+  Serial.print("VBat: " ); Serial.println(measuredvbat);
+  int battery = (measuredvbat * 100)/4.2;
+
+  Serial.print(F("Updating Baterry value to "));
+  Serial.print(battery);
+  Serial.println(F(" %"));
+
+  /* Command is sent when \n (\r) or println is called */
+  /* AT+GATTCHAR=CharacteristicID,value */
+  ble.print( F("AT+GATTCHAR=") );
+  ble.print( batMeasureCharId );
+  ble.print( F(",") );
+  ble.println(battery);
  
 }
