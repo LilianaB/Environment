@@ -19,7 +19,6 @@
 
 #include <Arduino.h>
 #include <SPI.h>
-#include <DHT.h>
 #if not defined (_VARIANT_ARDUINO_DUE_X_) && not defined (_VARIANT_ARDUINO_ZERO_)
   #include <SoftwareSerial.h>
 #endif
@@ -31,13 +30,13 @@
 #include "BluefruitConfig.h"
 
 #include "DHT.h"          // DHT & AM2302 library
-// Version number
-const float fVerNum = 0.03;
 
 // Data pin connected to AM2302
 #define DHTPIN 2
 #define DHTTYPE DHT22       // DHT 22  (AM2302)
-DHT dht(DHTPIN, DHTTYPE);   // LED pins
+
+// Initialize DHT sensor
+DHT dht(DHTPIN, DHTTYPE);
 
 // Create the bluefruit object, either software serial...uncomment these lines
 /*
@@ -78,23 +77,12 @@ int32_t hrmLocationCharId;
 /**************************************************************************/
 void setup(void)
 {
-  while (!Serial); // required for Flora & Micro
+  //while (!Serial); // required for Flora & Micro
   delay(500);
 
   boolean success;
 
   Serial.begin(115200);
-
-  // Wait 3 seconds
-  delay(3000);
-
-  Serial.println(F("Start temperature sensor"));
-  Serial.println(F("---------------------------------------------------"));
-  Serial.println(F("\nAM2302 Sensor"));
-  Serial.print(F("Version : "));
-  Serial.println(fVerNum);
-  Serial.println(F("Arduino\n"));
-  delay(5000);
   
   dht.begin();
   
@@ -147,7 +135,7 @@ void setup(void)
   /* Add the Temperature characteristic */
   /* Chars ID for Measurement should be 1 */
   Serial.println(F("Adding the Temperature characteristic (UUID = 0x2A6E): "));
-  success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A6E, PROPERTIES=0x10, MIN_LEN=3, MAX_LEN=8"), &hrmMeasureCharId);
+  success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A6E, PROPERTIES=0x10, MIN_LEN=3, MAX_LEN=5"), &hrmMeasureCharId);
     if (! success) {
     error(F("Could not add Temperature characteristic"));
   }
@@ -155,14 +143,14 @@ void setup(void)
   /* Add the Humidity characteristic */
   /* Chars ID for Humidity should be 2 */
   Serial.println(F("Adding the Humidity characteristic (UUID = 0x2A6F): "));
-  success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A6F, PROPERTIES=0x10, MIN_LEN=3, MAX_LEN=8"), &hrmLocationCharId);
+  success = ble.sendCommandWithIntReply( F("AT+GATTADDCHAR=UUID=0x2A6F, PROPERTIES=0x10, MIN_LEN=3, MAX_LEN=5"), &hrmLocationCharId);
     if (! success) {
     error(F("Could not add BSL characteristic"));
   }
 
-  /* Add the Heart Rate Service to the advertising data (needed for Nordic apps to detect the service) */
- /* Serial.print(F("Adding Heart Rate Service UUID to the advertising payload: "));
-  ble.sendCommandCheckOK( F("AT+GAPSETADVDATA=02-01-06-05-02-0d-18-0a-18") );
+  /* Add Environmental Sensing Service to the advertising data (needed for Nordic apps to detect the service) */
+  Serial.print(F("Adding Environmental Sensing Service to the advertising payload: "));
+  ble.sendCommandCheckOK( F("AT+GAPSETADVDATA=03-16-01-06") );
 
   /* Reset the device for the new service setting changes to take effect */
   Serial.print(F("Performing a SW reset (service changes require a reset): "));
@@ -174,6 +162,8 @@ void setup(void)
 /** Send randomized heart rate data continuously **/
 void loop(void)
 {
+  // Wait a few seconds between measurements.
+  delay(2000);
 
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
@@ -182,7 +172,7 @@ void loop(void)
 
   // check if returns are valid, if they are NaN (not a number) then something went wrong!
   if (isnan(t) || isnan(h)) {
-    Serial.println(F("Failed to read from DHT"));
+    Serial.println(F("Failed to read from DHT sensor!"));
   }
   else {
     Serial.print(F("Humidity: ")); 
@@ -204,13 +194,13 @@ void loop(void)
     /* AT+GATTCHAR=CharacteristicID,value */
     ble.print( F("AT+GATTCHAR=") );
     ble.print( hrmMeasureCharId );
-    ble.print( F(",00-") );
+    ble.print( F(",") );
     ble.println(t, HEX);
     //ble.println(myBuffer);
 
     ble.print( F("AT+GATTCHAR=") );
     ble.print( hrmLocationCharId );
-    ble.print( F(",00-") );
+    ble.print( F(",") );
     ble.println(h, HEX);
   
     /* Check if command executed OK */
@@ -220,7 +210,5 @@ void loop(void)
     }
   
   }
-  
-   /* Delay before next measurement update */
-  delay(3000);
+ 
 }
