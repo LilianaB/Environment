@@ -71,6 +71,8 @@ int32_t batServiceId;
 int32_t hrmMeasureCharId;
 int32_t hrmLocationCharId;
 int32_t batMeasureCharId;
+
+uint8_t batteryTimer = 101; //100 x 3 sec = 5 min
 /**************************************************************************/
 /*!
     @brief  Sets up the HW an the BLE module (this function is called
@@ -186,7 +188,7 @@ void setup(void)
 void loop(void)
 {
   // Wait a few seconds between measurements.
-  delay(2000);
+  delay(3000);
 
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
@@ -235,23 +237,29 @@ void loop(void)
   }
 
   #define VBATPIN A9
-   
-  float measuredvbat = analogRead(VBATPIN);
-  measuredvbat *= 2;    // we divided by 2, so multiply back
-  measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
-  measuredvbat /= 1024; // convert to voltage
-  Serial.print("VBat: " ); Serial.println(measuredvbat);
-  int battery = (measuredvbat * 100)/4.2;
 
-  Serial.print(F("Updating Baterry value to "));
-  Serial.print(battery);
-  Serial.println(F(" %"));
+   if (batteryTimer == 0 || batteryTimer > 100) {
+    float measuredvbat = analogRead(VBATPIN);
+    measuredvbat *= 2;    // we divided by 2, so multiply back
+    measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+    measuredvbat /= 1024; // convert to voltage
+    Serial.print("VBat: " ); Serial.println(measuredvbat);
+    int battery = (measuredvbat * 100)/4.2;
+  
+    Serial.print(F("Updating Baterry value to "));
+    Serial.print(battery);
+    Serial.println(F(" %"));
+  
+    /* Command is sent when \n (\r) or println is called */
+    /* AT+GATTCHAR=CharacteristicID,value */
+    ble.print( F("AT+GATTCHAR=") );
+    ble.print( batMeasureCharId );
+    ble.print( F(",") );
+    ble.println(battery);
 
-  /* Command is sent when \n (\r) or println is called */
-  /* AT+GATTCHAR=CharacteristicID,value */
-  ble.print( F("AT+GATTCHAR=") );
-  ble.print( batMeasureCharId );
-  ble.print( F(",") );
-  ble.println(battery);
+    batteryTimer = 100;
+   }
+
+   batteryTimer = batteryTimer -1;
  
 }
